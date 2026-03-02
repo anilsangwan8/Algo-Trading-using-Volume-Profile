@@ -1,0 +1,6 @@
+streamlit
+fyers-apiv3
+pandas
+pandas_ta
+numpy
+setuptools
