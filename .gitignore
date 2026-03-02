@@ -1,4 +1,5 @@
 user_config.py
+__pycache__
 *.log
 __pycache__/git
 src/__pycache__
