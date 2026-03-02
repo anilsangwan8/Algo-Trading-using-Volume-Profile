@@ -1,0 +1,6 @@
+user_config.py
+*.log
+__pycache__/git
+src/__pycache__
+.vscode
+backups

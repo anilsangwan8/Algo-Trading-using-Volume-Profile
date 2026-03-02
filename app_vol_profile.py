@@ -1,6 +1,7 @@
 from src.logging_helper_vol_profile import logging_helper
 import streamlit as st
 import pandas as pd
+import user_config
 from fyers_apiv3 import fyersModel
 from src.fyers_client_vol_profile import get_access_token, subscribe_to_live_data, place_order
 from src.trading_logic_vol_profile import  check_stop, detect_signal, get_volume_profile_stats, get_volume_profile_live, para, get_zone
@@ -42,11 +43,11 @@ st.subheader("Volume Profile Trading Bot")
 
 # --------------- SESSION STATE INIT ---------------
 if 'client_id' not in st.session_state:
-    st.session_state.client_id = "F436AH37O2-100"
+    st.session_state.client_id = user_config.CLIENT_ID 
 if 'secret_key' not in st.session_state:
-    st.session_state.secret_key = "9F241B61PS"
+    st.session_state.secret_key = user_config.SECRET_KEY 
 if 'redirect_uri' not in st.session_state:
-    st.session_state.redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
+    st.session_state.redirect_uri = user_config.REDIRECT_URI 
 if 'access_token' not in st.session_state:
     st.session_state.access_token = None
 if 'fyers' not in st.session_state:
