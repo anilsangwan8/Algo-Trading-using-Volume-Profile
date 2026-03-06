@@ -206,12 +206,11 @@ else:
                 live_time_cutoff = datetime.datetime.fromtimestamp(int(live_time))
 
                 live_market = datetime.time(9,15,00) <= live_time_cutoff.time() <= datetime.time(15,29,59)
-                trade_allowed = datetime.time(9,20) <= live_time_cutoff.time() <= datetime.time(15,5)
+                trade_allowed = datetime.time(9,20,00) <= live_time_cutoff.time() <= datetime.time(15,5,00)
                 '''live_market = True
                 trade_allowed = True'''
 
-                if trade_allowed:
-                    live_data["trade_allowed"] = True
+                live_data["trade_allowed"] = bool(trade_allowed)
 
                 if not live_market:
                     print("Current TIme - ", live_time_cutoff, "Out of the Trading Window - 9:15:00 to 15:29:59")

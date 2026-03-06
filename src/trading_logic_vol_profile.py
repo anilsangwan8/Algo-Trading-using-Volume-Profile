@@ -232,8 +232,8 @@ def detect_signal(live_data, open_positions_global, executed_trades_global, para
     elif poc_retest_sell or (regime != "trend_up" and was_near(poc, "high") and cp < poc and bearish_rejection()):
         decision = "poc_retest_sell"
 
-    if decision == "wait":
-        return None
+    '''if decision == "wait":
+        return None'''
     
     # =====================================================
     # Print statements
