@@ -393,7 +393,7 @@ def check_stop(live_data, trade_info, para, executed_trades):
     if sum(trade["pnl"] for trade in executed_trades) >= para["max_profit"]:
         return True
 
-# ======================== Trade Management (Breakeven & Trail) ====================
+    # ======================== Trade Management (Breakeven & Trail) ====================
     point_captured = (live_price - entry) if side == "buy" else (entry - live_price)
     point_targted = (target - entry) if side == "buy" else (entry - target)
     if point_targted > 0:
