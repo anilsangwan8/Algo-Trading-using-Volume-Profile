@@ -59,7 +59,7 @@ def subscribe_to_live_data(access_token, symbols, on_message):
     fyers_ws.connect()
 
 
-def place_order(fyers, symbol, qty, side, order_type, limit_price=0, stop_price=0, validity="DAY", disclosed_qty=0, offline_order=False, stop_loss=0, take_profit=0, order_Tag = "vwap"):
+def place_order(fyers, symbol, qty, side, order_type, limit_price=0, stop_price=0, validity="DAY", disclosed_qty=0, offline_order=False, stop_loss=0, take_profit=0, order_Tag = "Trend"):
     data = {
         "symbol": symbol,
         "qty": qty,

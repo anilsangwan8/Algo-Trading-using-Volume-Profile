@@ -3,9 +3,6 @@ import numpy as np
 import pandas_ta as ta
 import datetime
 
-para = {"max_loss": 100, "max_profit":100, "range_len":20, "trend_atr_m":1.5, "bal_atr_m":0.5, "range_m":1.2, "vol_m":1.3,
-    "break_sl_m":1.5, "fade_sl_m":1.0, "max_hold_min":90}
-
 # =====================================================
 # Journey Capture
 # =====================================================
@@ -37,8 +34,8 @@ def get_zone(live_data):
     else:
         live_data["zone_history"].append("inside")
 
-def detect_signal(live_data, open_positions_global, executed_trades_global, para):
-    
+def detect_signal(live_data, executed_trades_global, para):
+    print(live_data)
     # =====================================================
     # 1) IB High and Low Building
     # =====================================================
@@ -59,7 +56,6 @@ def detect_signal(live_data, open_positions_global, executed_trades_global, para
     op = live_data["open_prices"][-1]
     vol = live_data["volume"][-1]
     
-    cvd = live_data["cvd"]
     vol_len = min(len(live_data["volume"]), int(para["range_len"]))
     hp_lp = [abs(x - y) for x, y in zip(live_data["high_prices"][-50:], live_data["low_prices"][-50:])]
     avg_range =  pd.Series(hp_lp).rolling(window=int(para["range_len"])).mean().iloc[-1]
@@ -296,8 +292,8 @@ def detect_signal(live_data, open_positions_global, executed_trades_global, para
     if "fade" in decision:         # Covers fade_from_vah_sell & fade_from_val_buy
         score += 2
 
-    print(f"[score] score: {score}", "\n",
-          "------------------------------------------------------------------------------------------------------------------------------------------------------")
+    print(f"    [score] score: {score}", "\n",
+          "---------------------------------------------------------------------------------------------------------------------------------------------------------")
 
     # =====================================================
     # 1) Trading window and cooling period
@@ -306,8 +302,8 @@ def detect_signal(live_data, open_positions_global, executed_trades_global, para
         print(f"market out of trading window")
         return None
     
-    if len(live_data['live_time']) > 0 and live_data['live_time'][-1] <= live_data['trade_exit_time'] + 60 * 5:
-        print("cooling period on - for 2 minutes")
+    if len(live_data['live_time']) > 0 and live_data['live_time'][-1] <= live_data['trade_exit_time'] + 60 * para["cooldown"]:
+        print("cooling period on - for 5 minutes")
         return None
     
     # =====================================================
