@@ -6,7 +6,7 @@ import datetime
 # --def logging_helper(ticker):
 def logging_helper(ticker):
     BASE_DIR = os.path.dirname(__file__)
-    LOG_DIR = os.path.join(BASE_DIR, "app_kama_logs")
+    LOG_DIR = os.path.join(BASE_DIR, "app_vol_profile_logs")
     os.makedirs(LOG_DIR, exist_ok=True) 
 
     today_str = datetime.datetime.now().strftime("%Y-%m-%d") 
