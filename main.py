@@ -110,7 +110,7 @@ class VolProfBotInstance:
                     self.live_data["curr_vah"] =today_vpf["VAH"]
                     self.live_data["curr_val"] = today_vpf["VAL"]
 
-                    for price, vol in zip(today_vpf["prices"], today_vpf["volume"]):
+                    for price, vol in zip(df_today["prices"], df_today["volume"]):
                         price_b = round(round(price / bin_size) * bin_size, 2)
                         self.live_vol_profile[price_b] = self.live_vol_profile.get(price_b, 0) + vol      
         else:
@@ -136,14 +136,14 @@ class VolProfBotInstance:
                 live_time_cutoff = datetime.datetime.fromtimestamp(int(live_time), tz=pytz.utc).astimezone(ist)
                 live_market = datetime.time(9,15,00) <= live_time_cutoff.time() <= datetime.time(15,29,59)
                 trade_allowed = datetime.time(9,15,0) <= live_time_cutoff.time() <= datetime.time(15,5,0)
-                live_market = True
-                trade_allowed = True
+                '''live_market = True
+                trade_allowed = True'''
 
                 self.live_data["trade_allowed"] = trade_allowed
                 self.live_data["live_price"] = live_price
 
                 if not live_market:
-                    self.logger.info(f"Current TIme -  {live_time_cutoff} Out of the Trading Window - 9:15:00 to 15:29:59")
+                    self.logger.info(f"Out of the Trading Window - 9:15:00 to 15:29:59")
                     return
                 last_qty = msg.get("vol_traded_today") - self.live_data['volume_traded_previous_tick']
                 self.live_data['volume_traded_previous_tick'] =  msg.get("vol_traded_today")
@@ -181,11 +181,11 @@ class VolProfBotInstance:
                     self.live_data["candle_time_start"].append(self.current_candle_ts)
                     self.live_data["candle_time_end"].append(self.live_data["live_time"][-1])
                     self.live_data["volume"].append(self.live_data["live_volume"])
-                    get_zone(live_data)
+                    get_zone(self.live_data)
                     # Keep 375
                     if len(self.live_data["prices"]) > 375:
                         for key in ["open_prices", "high_prices", "low_prices", "prices", "volume", "candle_time_start","candle_time_end"]:
-                            self.live_data[key] = self.live_data[key][-1500:]
+                            self.live_data[key] = self.live_data[key][-375:]
                     self.current_candle_ts = this_candle_id
                     self.live_data["live_volume"] = 0
                     self.live_data["live_candle"].clear()
@@ -193,18 +193,19 @@ class VolProfBotInstance:
                     
                     print_live = {k: v[-10:] if isinstance(v, list) else v for k, v in self.live_data.items()}
                     self.logger.info(f"{print_live}")
+                    self.logger.info(f"Open Positions: {self.open_positions_global}")
+                    self.logger.info(f"Executed Traded: {self.executed_trades_global}")
 
                 self.live_data["live_candle"].append(live_price)
                 self.live_data["live_time"].append(live_time)
                 self.live_data["live_volume"] += last_qty
-                self.logger.info(f"Open Positions: {self.open_positions_global}")
-                self.logger.info(f"Executed Traded: {self.executed_trades_global}")
+                
 
 
             # --- EXIT LOGIC ---
             with self.open_positions_lock, self.executed_trades_lock:
                 for trade_symbol, trade_info in list(self.open_positions_global.items()):
-                    if check_stop(self.live_data, trade_info,  self.cfg, self.executed_trades_global):
+                    if check_stop(self.live_data, trade_info,  self.cfg, self.executed_trades_global, self.logger):
                         place_order(self.fyers, trade_symbol, trade_info["qty"], 
                                     "sell" if trade_info["side"]=="buy" else "buy", "market")
                         del self.open_positions_global[trade_symbol]
@@ -213,7 +214,7 @@ class VolProfBotInstance:
 
             # --- ENTRY LOGIC ---
             with self.executed_trades_lock, self.open_positions_lock:
-                signal_dict = detect_signal(self.live_data, self.executed_trades_global, self.cfg)
+                signal_dict = detect_signal(self.live_data, self.executed_trades_global, self.cfg, self.logger)
                 self.logger.info(f"Signal_Dic : {signal_dict}")
                 signal = signal_dict["side"] if signal_dict is not None else None
 
@@ -286,6 +287,7 @@ class VolProfBotInstance:
 
                         self.logger.info(f"{logging_time} | {self.ticker} | ENTRY SUCCESS: {symbol_to_trade} at {fill_price}")
 
+            self.logger.info(f"------------------------------------------------------------------------")
         except Exception as e:
             self.logger.info(f"Error in {self.ticker}: {e}")
 

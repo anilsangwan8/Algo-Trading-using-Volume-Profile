@@ -34,8 +34,7 @@ def get_zone(live_data):
     else:
         live_data["zone_history"].append("inside")
 
-def detect_signal(live_data, executed_trades_global, para):
-    print(live_data)
+def detect_signal(live_data, executed_trades_global, para, logger):
     # =====================================================
     # 1) IB High and Low Building
     # =====================================================
@@ -75,7 +74,7 @@ def detect_signal(live_data, executed_trades_global, para):
     val = curr_val if curr_val else prv_val
 
     if not vah or not val or not poc:
-        print("vah and val not in data")
+        logger.info(f"vah and val not in data")
         return None
 
     # =====================================================
@@ -234,7 +233,7 @@ def detect_signal(live_data, executed_trades_global, para):
     # =====================================================
     # Print statements
     # =====================================================
-    print(f"""
+    logger.info(f"""
     --- Decision Logic Debug ----------------------------------------------------------------------------------------------------------------------------
     [Context] CP: {cp} | HP: {hp} | LP: {lp} | VAH: {vah} | VAL: {val} | POC: {poc} | Regime {regime}
     [Prev Levels] PrvVAH: {prv_vah} | PrvVAL: {prv_val}
@@ -250,11 +249,11 @@ def detect_signal(live_data, executed_trades_global, para):
     # =====================================================
     # 1. Kill Fades during Migration
     if "fade" in decision and (migrating_up or migrating_down):
-        print("returned from killing the fade")
+        logger.info(f"returned from killing the fade")
         return None
 
     if "breakout" in decision and (live_time_cutoff.time() < datetime.time(9, 45)):
-        print("returned from killing the breakout")
+        logger.info(f"returned from killing the breakout")
         return None
 
     # 2. Time Acceptance for Quiet Breakouts
@@ -267,10 +266,10 @@ def detect_signal(live_data, executed_trades_global, para):
 
     # 3. Macro Trend Protection
     if regime == "trend_up" and "sell" in decision and "fill" not in decision:
-        print("Macro trend protection")
+        logger.info(f"Macro trend protection")
         return None
     if regime == "trend_down" and "buy" in decision and "fill" not in decision:
-        print("Macro trend protection")
+        logger.info(f"Macro trend protection")
         return None
 
     # =====================================================
@@ -292,18 +291,18 @@ def detect_signal(live_data, executed_trades_global, para):
     if "fade" in decision:         # Covers fade_from_vah_sell & fade_from_val_buy
         score += 2
 
-    print(f"    [score] score: {score}", "\n",
-          "---------------------------------------------------------------------------------------------------------------------------------------------------------")
+    logger.info(f"""[score] score: {score}
+                        ------------------------------------------------------------------------------""")
 
     # =====================================================
     # 1) Trading window and cooling period
     # =====================================================
     if not live_data["trade_allowed"]:
-        print(f"market out of trading window")
+        logger.info(f"market out of trading window")
         return None
     
     if len(live_data['live_time']) > 0 and live_data['live_time'][-1] <= live_data['trade_exit_time'] + 60 * para["cooldown"]:
-        print("cooling period on - for 5 minutes")
+        logger.info(f"cooling period on - for 5 minutes")
         return None
     
     # =====================================================
@@ -315,7 +314,7 @@ def detect_signal(live_data, executed_trades_global, para):
         if sum(trade["pnl"] for trade in executed_trades_global) >= para["max_profit"]:
             return None
         if len(executed_trades_global) >= 3 and all(trade["sl_hit"] == "yes" for trade in executed_trades_global[-3:]):
-            print("Trading Stopped as 3 Stop Losses Hit")
+            logger.info(f"Trading Stopped as 3 Stop Losses Hit")
             return None
 
     # =====================================================
@@ -369,7 +368,7 @@ def detect_signal(live_data, executed_trades_global, para):
 #===============================================================
 #check stop and book profit live_data, trade_info, para, executed_trades_global
 #===============================================================
-def check_stop(live_data, trade_info, para, executed_trades):
+def check_stop(live_data, trade_info, para, executed_trades, logger):
 
     live_price = live_data["live_price"]
     side   = trade_info["signal_type"]
@@ -405,7 +404,7 @@ def check_stop(live_data, trade_info, para, executed_trades):
                 if new_stop < stop:
                     trade_info["stop_price"] = new_stop  
                 
-            print(f"Tier 3 Trail 80 : Locked profit at {trade_info['stop_price']:.2f}")
+            logger.info(f"Tier 3 Trail 80 : Locked profit at {trade_info['stop_price']:.2f}")
 
         if 0.85 > ratio >= 0.7:
             if side == "buy":
@@ -420,7 +419,7 @@ def check_stop(live_data, trade_info, para, executed_trades):
                     trade_info["stop_price"] = new_stop  
                 trade_info["target_price"] = target - (point_targted * 0.1)
                 
-            print(f"Tier 2 Trail: Locked profit at {trade_info['stop_price']:.2f}. Target pushed to {trade_info['target_price']:.2f}")
+            logger.info(f"Tier 2 Trail: Locked profit at {trade_info['stop_price']:.2f}. Target pushed to {trade_info['target_price']:.2f}")
 
         # --- TIER 1: 40% Reached (Move to Breakeven) ---
         elif ratio >= 0.4 and not trade_info.get("trail_40_done", False):
@@ -433,7 +432,7 @@ def check_stop(live_data, trade_info, para, executed_trades):
                 trade_info["stop_price"] = new_stop
                 trade_info["trail_40_done"] = True
             
-            print(f"Tier 1 Trail: Stop moved to exact Entry ({entry}). Trade is now Risk-Free.")
+            logger.info(f"Tier 1 Trail: Stop moved to exact Entry ({entry}). Trade is now Risk-Free.")
 
     stop = trade_info["stop_price"]
     target = trade_info["target_price"]
