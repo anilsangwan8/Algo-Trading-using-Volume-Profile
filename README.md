@@ -1,83 +1,287 @@
 ---
-sdk: streamlit
-title: Directional Trading Bot
-python_version: '3.12'
+
+# Volume Profile Trading Engine
+
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![Status](https://img.shields.io/badge/Status-Active-success)
+![Strategy](https://img.shields.io/badge/Type-Intraday%20Trading-orange)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
+A rule-based intraday trading engine that leverages Volume Profile, Price Action, and Market Structure to generate high-quality trading signals with built-in risk management and trade lifecycle control.
+
 ---
-cd /d "F:\Trading Bot\Directional Trading Bot"
-conda install -c conda-forge streamlit fyers-apiv3 pandas numpy setuptools -y
-conda list streamlit
-
-# Fyers Trading Bot
-
-This is a Streamlit-based trading bot that connects to the Fyers API and executes trades based on a configurable moving average crossover strategy.
 
 ## Features
 
--   Connects to the Fyers API v3.
--   Executes trades (Equity or Options) based on a moving average crossover strategy.
--   Configurable moving average periods, timeframe, and other trading parameters.
--   Trailing stop-loss based on a moving average.
--   User-friendly interface built with Streamlit.
+* Volume Profile (POC, VAH, VAL)
+* Market Regime Detection (Trend / Balance / Normal)
+* Price Journey Tracking (Context-aware trading)
+* Multi-strategy Signal Engine
+* Dynamic Stop Loss and Targeting
+* Advanced Trade Management (Trailing and Breakeven)
+* Strong Risk Controls (Daily limits, cooldowns)
 
-## Development Environment
+---
 
-For the best development experience, we recommend using a modern code editor like Visual Studio Code.
+## Strategy Philosophy
 
-### Visual Studio Code Setup
+This system does not just react to price — it interprets how price behaves around value.
 
-1.  **Install VS Code**: If you don't have it already, download and install [Visual Studio Code](https://code.visualstudio.com/).
+The engine focuses on:
 
-2.  **Recommended Extensions**: For an enhanced Python and Streamlit development experience, we recommend installing the following extensions:
-    *   [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) (Microsoft)
-    *   [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) (Microsoft)
-    *   [Streamlit](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.streamlit) (Microsoft)
+* Acceptance vs Rejection
+* Movement relative to value areas
+* Market intent (trend vs balance)
+* Context-driven entries instead of indicator-only signals
+
+---
+
+## Architecture Overview
+
+```
+Live Market Data
+       ↓
+Zone Tracking (get_zone)
+       ↓
+Signal Engine (detect_signal)
+       ↓
+Trade Execution
+       ↓
+Trade Manager (check_stop)
+       ↓
+Exit / Trail / Risk Control
+```
+
+---
+
+## Core Components
+
+### 1. `get_zone(live_data)`
+
+Tracks whether price is:
+
+* above VAH
+* inside value area
+* below VAL
+
+Maintains a rolling zone history used for behavioral analysis.
+
+---
+
+### 2. `detect_signal(...)`
+
+Core decision engine.
+
+Handles:
+
+#### Market Context
+
+* Initial Balance (IB)
+* ATR and volatility
+* Volume analysis
+
+#### Market Regime
+
+* trend_up
+* trend_down
+* balance
+* normal
+
+#### Strategy Types
+
+| Strategy            | Description              |
+| ------------------- | ------------------------ |
+| Breakouts           | Strong directional moves |
+| Fades               | Reversals at extremes    |
+| POC Retests         | Mean reversion           |
+| Value Area Fills    | Traversing value         |
+| Previous Day Levels | Institutional zones      |
+
+#### Decision Priority
+
+1. Reclaim moves
+2. Migration
+3. Fades
+4. Value fills
+5. Retests
+
+#### Trade Filtering
+
+* Impulse validation
+* Candle confirmation
+* Acceptance logic
+* Score-based filtering
+
+---
+
+### 3. `check_stop(...)`
+
+Trade lifecycle manager.
+
+#### Dynamic Trade Management
+
+| Tier   | Condition  | Action                     |
+| ------ | ---------- | -------------------------- |
+| Tier 1 | 40% target | Move SL to breakeven       |
+| Tier 2 | 70% target | Trail SL and extend target |
+| Tier 3 | 85% target | Lock profits               |
+
+#### Exit Conditions
+
+* Stop Loss hit
+* Target achieved
+* Time-based exit
+* Daily risk limits
+
+---
+
+### 4. Volume Profile Utilities
+
+#### `get_volume_profile_live(df)`
+
+* Builds profile directly from price-volume data
+* Computes:
+
+  * POC
+  * VAH
+  * VAL
+
+#### `get_volume_profile_stats(df, bin_size=0.05)`
+
+* Adds price binning
+* Reduces noise
+* Produces smoother levels
+
+---
+
+## Configuration
+
+All strategy behavior is controlled via a parameter dictionary:
+
+```python
+para = {
+    "range_len": 20,
+    "range_m": 1.5,
+    "vol_m": 1.5,
+    "trend_atr_m": 1.2,
+    "bal_atr_m": 0.5,
+    "break_sl_m": 1.2,
+    "fade_sl_m": 0.8,
+    "cooldown": 5,
+    "max_loss": 1000,
+    "max_profit": 2000
+}
+```
+
+---
+
+## Input Data Format
+
+```python
+live_data = {
+    "prices": [],
+    "high_prices": [],
+    "low_prices": [],
+    "open_prices": [],
+    "volume": [],
+    "live_time": [],
+    "live_price": float,
+
+    "curr_vah": float,
+    "curr_val": float,
+    "curr_poc": float,
+
+    "prv_vah": float,
+    "prv_val": float,
+    "prv_poc": float,
+
+    "trade_allowed": True,
+    "trade_exit_time": int
+}
+```
+
+---
+
+## Output Signal
+
+```python
+{
+    "side": "buy" | "sell",
+    "entry": float,
+    "sl": float,
+    "target": float,
+    "score": int,
+    "strategy": str,
+    "regime": str,
+    "journey": str
+}
+```
+
+---
+
+## Risk Management
+
+The system enforces strict safeguards:
+
+* Stops trading after max loss
+* Locks profits progressively
+* Enforces cooldown between trades
+* Avoids low-quality setups via scoring
+* Prevents trading against macro trend
+
+---
+
+## Use Cases
+
+* Intraday trading systems
+* Algorithmic trading bots
+* Backtesting engines
+* Strategy research and experimentation
+
+---
 
 ## Setup
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository_url>
-    cd <repository_name>
-    ```
+```bash
+pip install pandas numpy pandas_ta fyers-apiv3 setuptools math scipy
 
-2.  **Install the dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+```
 
-## Usage
+---
 
-1.  **Run the Streamlit application:**
-    ```bash
-    streamlit run app.py
-    ```
+## Example Usage
 
-2.  **Open the application in your browser.**
+```python
+get_zone(live_data)
 
-3.  **Enter your Fyers API credentials:**
-    -   Client ID
-    -   Secret Key
-    -   Redirect URI
+signal = detect_signal(live_data, executed_trades, para, logger)
 
-4.  **Generate an access token:**
-    -   Click the "Generate Access Token" button.
-    -   You will be redirected to the Fyers login page.
-    -   After logging in, you will be redirected back to your redirect URI with an auth code in the URL.
-    -   Copy the auth code and paste it into the "Auth Code" field in the application.
-    -   Click the "Generate Access Token" button again.
+if signal:
+    execute_trade(signal)
+```
 
-5.  **Configure the trading parameters:**
-    -   Ticker
-    -   Timeframe
-    -   Moving average periods
-    -   Max trades
-    -   Trade type (Equity or Options)
-    -   Option type (Call or Put)
-    -   Quantity
-    -   Expiry date (for options)
+---
 
-6.  **Start the bot:**
-    -   Click the "Start Bot" button.
+## Disclaimer
 
-7.  **Monitor the bot's activity:**
-    -   The application will display the live price of the ticker and a table of executed trades.
+This project is for educational and research purposes only.
+
+Trading involves risk. Use with proper:
+
+* Backtesting
+* Risk management
+* Capital allocation
+
+---
+
+## Final Thought
+
+Markets are not random — they are contextual.
+
+This engine attempts to capture that context:
+
+* Where price is
+* Where it came from
+* What it is likely trying to do
+
+---
